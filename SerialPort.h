@@ -26,9 +26,12 @@
 #define WM_COMM_TXEMPTY_DETECTED	WM_COMM_MSG_BASE + 9	// The last character in the output buffer was sent.
 #define WM_COMM_RXSTR               WM_COMM_MSG_BASE + 10   // Receive string
 
-
 #define COMM_MAX_PORT_NUMBER 200   //最大串口总个数
-#define IsReceiveString  1     //采用何种方式接收：ReceiveString 1多字符串接收（对应响应函数为WM_COMM_RXSTR），ReceiveString 0一个字符一个字符接收（对应响应函数为WM_COMM_RXCHAR）
+
+//采用何种方式接收：
+//	ReceiveString 0 一个字符一个字符接收（对应响应函数为WM_COMM_RXCHAR）
+//	ReceiveString 1 多字符串接收（对应响应函数为WM_COMM_RXSTR）
+#define IsReceiveString  1
 
 class CSerialPort
 {
@@ -57,18 +60,11 @@ public:
 	DCB			 GetDCB();///获取DCB
 
 	///写数据到串口
-	void		WriteToPort(char* string);
-	void		WriteToPort(char* string,int n); // add by mrlong 2007-12-25
-	void		WriteToPort(LPCTSTR string);	 // add by mrlong 2007-12-25
-	void		WriteToPort(LPCTSTR string,int n);//add by mrlong 2007-12-2
-	void		WriteToPort(BYTE* Buffer, int n);// add by mrlong
-	void		ClosePort();					 // add by mrlong 2007-12-2
+	void		WriteToPort(LPCSTR string);
+	void		WriteToPort(LPCSTR string, int len);
+	void		WriteToPort(LPBYTE buffer, int len);
+	void		ClosePort();
 	BOOL		IsOpen();
-
-	//void SendData(LPCTSTR lpszData, const int nLength);   //串口发送函数 by mrlong 2008-2-15
-	//BOOL RecvData(LPTSTR lpszData, const int nSize);	  //串口接收函数 by mrlong 2008-2-15
-	void QueryKey(HKEY hKey);///查询注册表的串口号，将值存于数组中
-	void Hkey2ComboBox(CComboBox& m_PortNO);///将QueryKey查询到的串口号添加到CComboBox控件中
 
 protected:
 	// protected memberfunctions

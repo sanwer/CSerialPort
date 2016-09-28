@@ -123,7 +123,6 @@ BOOL CSerialPort::InitPort(HWND pPortOwner,		// the owner of the port (receives 
 				::DispatchMessage(&message);
 			}
 		} while (m_bThreadAlive);
-		TRACE("Thread ended\n");
 		Sleep(50);
 	}
 
@@ -164,8 +163,8 @@ BOOL CSerialPort::InitPort(HWND pPortOwner,		// the owner of the port (receives 
 	m_dwCommEvents = dwCommEvents;
 
 	BOOL bResult = FALSE;
-	char *szPort = new char[50];
-	char *szBaud = new char[50];
+	TCHAR *szPort = new TCHAR[50];
+	TCHAR *szBaud = new TCHAR[50];
 
 	// now it critical!
 	EnterCriticalSection(&m_csCommunicationSync);
@@ -178,8 +177,8 @@ BOOL CSerialPort::InitPort(HWND pPortOwner,		// the owner of the port (receives 
 	}
 
 	// prepare port strings
-	sprintf_s(szPort,50, "\\\\.\\COM%d", portnr);
-	sprintf_s(szBaud,50, "baud=%d parity=%c data=%d stop=%d", baud, parity, databits, stopbits);
+	_stprintf_s(szPort,50, _T("\\\\.\\COM%d"), portnr);
+	_stprintf_s(szBaud,50, _T("baud=%d parity=%c data=%d stop=%d"), baud, parity, databits, stopbits);
 
 	// get a handle to the port
 	m_hComm = CreateFile(szPort,						// communication port string (COMX)
@@ -261,8 +260,6 @@ BOOL CSerialPort::InitPort(HWND pPortOwner,		// the owner of the port (receives 
 
 	// release critical section
 	LeaveCriticalSection(&m_csCommunicationSync);
-
-	TRACE("Initialisation for communicationport %d completed.\nUse Startmonitor to communicate.\n", portnr);
 
 	return TRUE;
 }
@@ -451,10 +448,8 @@ DWORD WINAPI CSerialPort::CommThread(LPVOID pParam)
 				break;
 			}
 		default:
-			{
-				AfxMessageBox("接收有问题!");
-				break;
-			}
+			MessageBox(NULL,_T("接收有问题!"),_T("Application Error"),MB_OK|MB_ICONERROR);
+			break;
 
 		} // end switch
 
@@ -517,7 +512,7 @@ BOOL CSerialPort::IsThreadSuspend(HANDLE hThread)
 //
 void CSerialPort::ProcessErrorMessage(char* ErrorText)
 {
-	char *Temp = new char[200];
+	TCHAR *Temp = new TCHAR[200];
 
 	LPVOID lpMsgBuf;
 
@@ -531,8 +526,8 @@ void CSerialPort::ProcessErrorMessage(char* ErrorText)
 		NULL
 		);
 
-	sprintf_s(Temp,200,"WARNING:  %s Failed with the following error: \n%s\nPort: %d\n", (char*)ErrorText, lpMsgBuf, m_nPortNr);
-	MessageBox(NULL, Temp, "Application Error", MB_ICONSTOP);
+	_stprintf_s(Temp,200,_T("WARNING:  %s Failed with the following error: \n%s\nPort: %d\n"), (TCHAR*)ErrorText, lpMsgBuf, m_nPortNr);
+	MessageBox(NULL,Temp,_T("Application Error"),MB_OK|MB_ICONERROR);
 
 	LocalFree(lpMsgBuf);
 	delete[] Temp;
@@ -586,9 +581,6 @@ void CSerialPort::WriteChar(CSerialPort* port)
 			case ERROR_ACCESS_DENIED:///拒绝访问 erroe code:5
 				{
 					port->m_hComm = INVALID_HANDLE_VALUE;
-					CString str;
-					str.Format("COM%d ERROR_ACCESS_DENIED，WriteFile() Error Code:%d",port->m_nPortNr,GetLastError());
-					AfxMessageBox(str);
 					break;
 				}
 			case ERROR_INVALID_HANDLE:///打开串口失败 erroe code:6
@@ -599,9 +591,6 @@ void CSerialPort::WriteChar(CSerialPort* port)
 			case ERROR_BAD_COMMAND:///连接过程中非法断开 erroe code:22
 				{
 					port->m_hComm = INVALID_HANDLE_VALUE;
-					CString str;
-					str.Format("COM%d ERROR_BAD_COMMAND，WriteFile() Error Code:%d",port->m_nPortNr,GetLastError());
-					AfxMessageBox(str);
 					break;
 				}
 			default:
@@ -635,9 +624,6 @@ void CSerialPort::WriteChar(CSerialPort* port)
 		}
 	} // end if (!bWrite)
 
-	// Verify that the data size send equals what we tried to send
-	if (BytesSent != SendLen)
-		TRACE("WARNING: WriteFile() error.. Bytes Sent: %d; Message Length: %d\n", BytesSent, strlen((char*)port->m_szWriteBuffer));
 	::SendMessage(port->m_pOwner, WM_COMM_TXEMPTY_DETECTED, (WPARAM) BytesSent, (LPARAM) port->m_nPortNr);
 }
 
@@ -848,9 +834,6 @@ void CSerialPort::ReceiveStr(CSerialPort* port)
 				case ERROR_ACCESS_DENIED:///拒绝访问 erroe code:5
 					{
 						port->m_hComm = INVALID_HANDLE_VALUE;
-						CString str;
-						str.Format("COM%d ERROR_ACCESS_DENIED，ReadFile() Error Code:%d",port->m_nPortNr,GetLastError());
-						AfxMessageBox(str);
 						break;
 					}
 				case ERROR_INVALID_HANDLE:///打开串口失败 erroe code:6
@@ -861,9 +844,6 @@ void CSerialPort::ReceiveStr(CSerialPort* port)
 				case ERROR_BAD_COMMAND:///连接过程中非法断开 erroe code:22
 					{
 						port->m_hComm = INVALID_HANDLE_VALUE;
-						CString str;
-						str.Format("COM%d ERROR_BAD_COMMAND，ReadFile() Error Code:%d",port->m_nPortNr,GetLastError());
-						AfxMessageBox(str);
 						break;
 					}
 				default:
@@ -908,21 +888,6 @@ void CSerialPort::ReceiveStr(CSerialPort* port)
 	} // end forever loop
 
 }
-
-//
-// Write a string to the port
-//
-void CSerialPort::WriteToPort(char* string)
-{
-	assert(m_hComm != 0);
-
-	memset(m_szWriteBuffer, 0, sizeof(m_szWriteBuffer));
-	strcpy_s(m_szWriteBuffer,m_nWriteBufferSize,string);
-	m_nWriteSize=strlen(string); // add by mrlong
-	// set event for write
-	SetEvent(m_hWriteEvent);
-}
-
 //
 // Return the device control block
 //
@@ -1009,169 +974,38 @@ void CSerialPort::ClosePort()
 	}
 }
 
-void CSerialPort::WriteToPort(char* string,int n)
-{
-	assert(m_hComm != 0);
-	memset(m_szWriteBuffer, 0, sizeof(m_szWriteBuffer));
-	memcpy(m_szWriteBuffer, string, n);
-	m_nWriteSize = n;
-
-	// set event for write
-	SetEvent(m_hWriteEvent);
-}
-
-void CSerialPort::WriteToPort(LPCTSTR string)
+// Write a string to the port
+void CSerialPort::WriteToPort(LPCSTR string)
 {
 	assert(m_hComm != 0);
 	memset(m_szWriteBuffer, 0, sizeof(m_szWriteBuffer));
 	strcpy_s(m_szWriteBuffer,m_nWriteBufferSize,string);
 	m_nWriteSize=strlen(string);
-	// set event for write
 	SetEvent(m_hWriteEvent);
 }
 
-void CSerialPort::WriteToPort(BYTE* Buffer, int n)
+// Write a string to the port
+void CSerialPort::WriteToPort(LPCSTR string,int len)
+{
+	assert(m_hComm != 0);
+	memset(m_szWriteBuffer, 0, sizeof(m_szWriteBuffer));
+	strcpy_s(m_szWriteBuffer,m_nWriteBufferSize,string);
+	m_nWriteSize=len;
+	SetEvent(m_hWriteEvent);
+}
+
+// Write a buffer to the port
+void CSerialPort::WriteToPort(BYTE* buffer, int len)
 {
 	assert(m_hComm != 0);
 	memset(m_szWriteBuffer, 0, sizeof(m_szWriteBuffer));
 	int i;
-	for(i=0; i<n; i++)
+	for(i=0; i<len; i++)
 	{
-		m_szWriteBuffer[i] = Buffer[i];
+		m_szWriteBuffer[i] = buffer[i];
 	}
-	m_nWriteSize=n;
+	m_nWriteSize=len;
 
 	// set event for write
 	SetEvent(m_hWriteEvent);
-}
-
-
-//void CSerialPort::SendData(LPCTSTR lpszData, const int nLength)
-//{
-//	assert(m_hComm != 0);
-//	memset(m_szWriteBuffer, 0, nLength);
-//	strcpy_s(m_szWriteBuffer,m_nWriteBufferSize,lpszData);
-//	m_nWriteSize=nLength;
-//	// set event for write
-//	SetEvent(m_hWriteEvent);
-//}
-
-//BOOL CSerialPort::RecvData(LPTSTR lpszData, const int nSize)
-//{
-//	//
-//	//接收数据
-//	//
-//	assert(m_hComm!=0);
-//	memset(lpszData,0,nSize);
-//	DWORD mylen  = 0;
-//	DWORD mylen2 = 0;
-//	while (mylen < (DWORD)nSize) {
-//		if(!ReadFile(m_hComm,lpszData,nSize,&mylen2,NULL))
-//			return FALSE;
-//		mylen += mylen2;
-//	}
-//
-//	return TRUE;
-//}
-
-//查询注册表的串口号，将值存于数组中
-void CSerialPort::QueryKey(HKEY hKey)
-{
-#define MAX_KEY_LENGTH 255
-#define MAX_VALUE_NAME 16383
-	//	TCHAR    achKey[MAX_KEY_LENGTH];   // buffer for subkey name
-	//	DWORD    cbName;                   // size of name string
-	TCHAR    achClass[MAX_PATH] = TEXT("");  // buffer for class name
-	DWORD    cchClassName = MAX_PATH;  // size of class string
-	DWORD    cSubKeys=0;               // number of subkeys
-	DWORD    cbMaxSubKey;              // longest subkey size
-	DWORD    cchMaxClass;              // longest class string
-	DWORD    cValues;              // number of values for key
-	DWORD    cchMaxValue;          // longest value name
-	DWORD    cbMaxValueData;       // longest value data
-	DWORD    cbSecurityDescriptor; // size of security descriptor
-	FILETIME ftLastWriteTime;      // last write time
-
-	DWORD i, retCode;
-
-	TCHAR  achValue[MAX_VALUE_NAME];
-	DWORD cchValue = MAX_VALUE_NAME;
-
-	// Get the class name and the value count.
-	retCode = RegQueryInfoKey(
-		hKey,                    // key handle
-		achClass,                // buffer for class name
-		&cchClassName,           // size of class string
-		NULL,                    // reserved
-		&cSubKeys,               // number of subkeys
-		&cbMaxSubKey,            // longest subkey size
-		&cchMaxClass,            // longest class string
-		&cValues,                // number of values for this key
-		&cchMaxValue,            // longest value name
-		&cbMaxValueData,         // longest value data
-		&cbSecurityDescriptor,   // security descriptor
-		&ftLastWriteTime);       // last write time
-
-	for (i=0;i<20;i++)///存放串口号的数组初始化
-	{
-		m_nComArray[i] = -1;
-	}
-
-	// Enumerate the key values.
-	if (cValues > 0) {
-		for (i=0, retCode=ERROR_SUCCESS; i<cValues; i++)
-		{
-			cchValue = MAX_VALUE_NAME;
-			achValue[0] = '\0';
-			if (ERROR_SUCCESS == RegEnumValue(hKey, i, achValue, &cchValue, NULL, NULL, NULL, NULL))
-			{
-				BYTE strDSName[10];
-				memset(strDSName, 0, 10);
-				DWORD nValueType = 0, nBuffLen = 10;
-				if (ERROR_SUCCESS == RegQueryValueEx(hKey, (LPCTSTR)achValue, NULL, &nValueType, strDSName, &nBuffLen))
-				{
-					int nIndex = -1;
-					while(++nIndex < COMM_MAX_PORT_NUMBER)
-					{
-						if (-1 == m_nComArray[nIndex])
-						{
-							m_nComArray[nIndex] = atoi((char*)(strDSName + 3));
-							break;
-						}
-					}
-				}
-			}
-		}
-	}
-	else{
-		AfxMessageBox(_T("本机没有串口....."));
-	}
-
-}
-
-void CSerialPort::Hkey2ComboBox(CComboBox& m_PortNO)
-{
-	HKEY hTestKey;
-	bool Flag = FALSE;
-
-	///仅是XP系统的注册表位置，其他系统根据实际情况做修改
-	if(ERROR_SUCCESS == RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("HARDWARE\\DEVICEMAP\\SERIALCOMM"), 0, KEY_READ, &hTestKey) )
-	{
-		QueryKey(hTestKey);
-	}
-	RegCloseKey(hTestKey);
-
-	int i = 0;
-	m_PortNO.ResetContent();///刷新时，清空下拉列表内容
-	while(i < COMM_MAX_PORT_NUMBER && -1 != m_nComArray[i])
-	{
-		CString szCom;
-		szCom.Format(_T("COM%d"), m_nComArray[i]);
-		m_PortNO.InsertString(i, szCom.GetBuffer(5));
-		++i;
-		Flag = TRUE;
-		if (Flag)///把第一个发现的串口设为下拉列表的默认值
-			m_PortNO.SetCurSel(0);
-	}
-
 }
