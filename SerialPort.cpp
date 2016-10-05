@@ -8,7 +8,6 @@
 ******************************************************************************/
 #include "stdafx.h"
 #include "SerialPort.h"
-#include <assert.h>
 
 int m_nComArray[20];//存放活跃的串口号
 //
@@ -102,8 +101,8 @@ BOOL CSerialPort::InitPort(HWND pPortOwner,		// the owner of the port (receives 
 						   DWORD   WriteTotalTimeoutConstant )
 
 {
-	assert(portnr > 0 && portnr < COMM_MAX_PORT_NUMBER);
-	assert(pPortOwner != NULL);
+	if( pPortOwner == NULL || portnr < 0 || portnr > COMM_MAX_PORT_NUMBER)
+		return FALSE;
 
 	MSG message;
 	if(IsThreadSuspend(m_Thread))
@@ -977,7 +976,8 @@ void CSerialPort::ClosePort()
 // Write a string to the port
 void CSerialPort::WriteToPort(LPCSTR string)
 {
-	assert(m_hComm != 0);
+	if(m_hComm == NULL)
+		return;
 	memset(m_szWriteBuffer, 0, sizeof(m_szWriteBuffer));
 	strcpy_s(m_szWriteBuffer,m_nWriteBufferSize,string);
 	m_nWriteSize=strlen(string);
@@ -987,7 +987,8 @@ void CSerialPort::WriteToPort(LPCSTR string)
 // Write a string to the port
 void CSerialPort::WriteToPort(LPCSTR string,int len)
 {
-	assert(m_hComm != 0);
+	if(m_hComm == NULL)
+		return;
 	memset(m_szWriteBuffer, 0, sizeof(m_szWriteBuffer));
 	strcpy_s(m_szWriteBuffer,m_nWriteBufferSize,string);
 	m_nWriteSize=len;
@@ -997,7 +998,8 @@ void CSerialPort::WriteToPort(LPCSTR string,int len)
 // Write a buffer to the port
 void CSerialPort::WriteToPort(BYTE* buffer, int len)
 {
-	assert(m_hComm != 0);
+	if(m_hComm == NULL)
+		return;
 	memset(m_szWriteBuffer, 0, sizeof(m_szWriteBuffer));
 	int i;
 	for(i=0; i<len; i++)
