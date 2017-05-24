@@ -1,4 +1,4 @@
-/******************************************************************************
+ï»¿/******************************************************************************
 **  Filename    CSerialPort.h
 **  Purpose     This class can read, write and watch one serial port.
 **              It sends messages to its owner when something happends on the port
@@ -6,32 +6,26 @@
 **              program is not blocked.
 **  Author      Remon Spekreijse, mrlong, liquanhai, viruscamp, itas109, sanwer
 ******************************************************************************/
-
-
 #ifndef __SERIALPORT_H__
 #define __SERIALPORT_H__
 
-#ifndef WM_COMM_MSG_BASE
-#define WM_COMM_MSG_BASE		WM_USER + 617		//!< ÏûÏ¢±àºÅµÄ»ùµã
-#endif
+#define COMM_BREAK_DETECTED		1	// A break was detected on input.
+#define COMM_CTS_DETECTED		2	// The CTS (clear-to-send) signal changed state.
+#define COMM_DSR_DETECTED		3	// The DSR (data-set-ready) signal changed state.
+#define COMM_ERR_DETECTED		4	// A line-status error occurred. Line-status errors are CE_FRAME, CE_OVERRUN, and CE_RXPARITY.
+#define COMM_RING_DETECTED		5	// A ring indicator was detected.
+#define COMM_RLSD_DETECTED		6	// The RLSD (receive-line-signal-detect) signal changed state.
+#define COMM_RXCHAR				7	// A character was received and placed in the input buffer.
+#define COMM_RXFLAG_DETECTED	8	// The event character was received and placed in the input buffer.
+#define COMM_TXEMPTY_DETECTED	9	// The last character in the output buffer was sent.
 
-#define WM_COMM_BREAK_DETECTED		WM_COMM_MSG_BASE + 1	// A break was detected on input.
-#define WM_COMM_CTS_DETECTED		WM_COMM_MSG_BASE + 2	// The CTS (clear-to-send) signal changed state.
-#define WM_COMM_DSR_DETECTED		WM_COMM_MSG_BASE + 3	// The DSR (data-set-ready) signal changed state.
-#define WM_COMM_ERR_DETECTED		WM_COMM_MSG_BASE + 4	// A line-status error occurred. Line-status errors are CE_FRAME, CE_OVERRUN, and CE_RXPARITY.
-#define WM_COMM_RING_DETECTED		WM_COMM_MSG_BASE + 5	// A ring indicator was detected.
-#define WM_COMM_RLSD_DETECTED		WM_COMM_MSG_BASE + 6	// The RLSD (receive-line-signal-detect) signal changed state.
-#define WM_COMM_RXCHAR				WM_COMM_MSG_BASE + 7	// A character was received and placed in the input buffer.
-#define WM_COMM_RXFLAG_DETECTED		WM_COMM_MSG_BASE + 8	// The event character was received and placed in the input buffer.
-#define WM_COMM_TXEMPTY_DETECTED	WM_COMM_MSG_BASE + 9	// The last character in the output buffer was sent.
-#define WM_COMM_RXSTR               WM_COMM_MSG_BASE + 10   // Receive string
+#define COMM_MAX_PORT_NUMBER 200   //æœ€å¤§ä¸²å£æ€»ä¸ªæ•°
 
-#define COMM_MAX_PORT_NUMBER 200   //×î´ó´®¿Ú×Ü¸öÊý
-
-//²ÉÓÃºÎÖÖ·½Ê½½ÓÊÕ£º
-//	ReceiveString 0 Ò»¸ö×Ö·ûÒ»¸ö×Ö·û½ÓÊÕ£¨¶ÔÓ¦ÏìÓ¦º¯ÊýÎªWM_COMM_RXCHAR£©
-//	ReceiveString 1 ¶à×Ö·û´®½ÓÊÕ£¨¶ÔÓ¦ÏìÓ¦º¯ÊýÎªWM_COMM_RXSTR£©
-#define IsReceiveString  1
+class ISerialPortSink
+{
+public:
+	virtual void OnCommEvent(UINT nPort,UINT nMsg,PVOID pParam,UINT nLen) = 0;
+};
 
 class CSerialPort
 {
@@ -40,80 +34,68 @@ public:
 	virtual ~CSerialPort();
 
 	// port initialisation
-	// stopsbits: 0,1,2 = 1, 1.5, 2
-	BOOL		InitPort(HWND pPortOwner, UINT portnr = 1, UINT baud = 9600,
-						 char parity = 'N', UINT databits = 8, UINT stopsbits = ONESTOPBIT,
-						 DWORD dwCommEvents = EV_RXCHAR | EV_CTS, UINT nBufferSize = 512,
-						 DWORD ReadIntervalTimeout = 1000,
-						 DWORD ReadTotalTimeoutMultiplier = 1000,
-						 DWORD ReadTotalTimeoutConstant = 1000,
-						 DWORD WriteTotalTimeoutMultiplier = 1000,
-						 DWORD WriteTotalTimeoutConstant = 1000);
-
-	BOOL		StartMonitoring();
-	BOOL		ResumeMonitoring();
-	BOOL		SuspendMonitoring();
-	BOOL		IsThreadSuspend(HANDLE hThread);
-
-	DWORD		 GetWriteBufferSize();///»ñÈ¡Ð´»º³å´óÐ¡
-	DWORD		 GetCommEvents();///»ñÈ¡ÊÂ¼þ
-	DCB			 GetDCB();///»ñÈ¡DCB
-
-	///Ð´Êý¾Ýµ½´®¿Ú
-	void		WriteToPort(LPCSTR string);
-	void		WriteToPort(LPCSTR string, int len);
-	void		WriteToPort(LPBYTE buffer, int len);
-	void		ClosePort();
-	BOOL		IsOpen();
+	BOOL	OpenPort(ISerialPortSink* pSink=NULL,
+					 UINT portnr = 1,
+					 DWORD baud = 9600,
+					 char parity = NOPARITY,
+					 BYTE databits = 8,
+					 BYTE stopsbits = ONESTOPBIT,
+					 DWORD dwCommEvents = EV_RXCHAR | EV_CTS, UINT nBufferSize = 512,
+					 DWORD ReadIntervalTimeout = 1000,
+					 DWORD ReadTotalTimeoutMultiplier = 1000,
+					 DWORD ReadTotalTimeoutConstant = 1000,
+					 DWORD WriteTotalTimeoutMultiplier = 1000,
+					 DWORD WriteTotalTimeoutConstant = 1000);
+	DWORD	GetWriteBufferSize(){return m_nWriteBufferSize;}//èŽ·å–å†™ç¼“å†²å¤§å°
+	DWORD	GetCommEvents(){return m_dwCommEvents;}//èŽ·å–äº‹ä»¶
+	DCB		GetDCB(){return m_dcb;}//èŽ·å–DCB
+	BOOL	WriteToPort(LPBYTE lpBuffer, int nBytesToWrite);
+	void	ClosePort();
+	BOOL	IsOpen();
 
 protected:
-	// protected memberfunctions
-	void		ProcessErrorMessage(char* ErrorText);///´íÎó´¦Àí
-	static DWORD WINAPI CommThread(LPVOID pParam);///Ïß³Ìº¯Êý
+	void	ProcessErrorMessage(char* ErrorText);///é”™è¯¯å¤„ç†
+	static	DWORD WINAPI CommThread(LPVOID pParam);///çº¿ç¨‹å‡½æ•°
 	static void	ReceiveChar(CSerialPort* port);
-	static void ReceiveStr(CSerialPort* port); //add by itas109 2016-06-22
 	static void	WriteChar(CSerialPort* port);
 
 	// thread
 	HANDLE				m_Thread;
-	BOOL				m_bIsSuspened;///thread¼àÊÓÏß³ÌÊÇ·ñ¹ÒÆð
 
 	// synchronisation objects
-	CRITICAL_SECTION	m_csCommunicationSync;///ÁÙ½ç×ÊÔ´
-	BOOL				m_bThreadAlive;///¼àÊÓÏß³ÌÔËÐÐ±êÖ¾
+	CRITICAL_SECTION	m_csCommunicationSync;///ä¸´ç•Œèµ„æº
+	BOOL				m_bThreadAlive;///ç›‘è§†çº¿ç¨‹è¿è¡Œæ ‡å¿—
 
 	// handles
-	HANDLE				m_hShutdownEvent;  //stop·¢ÉúµÄÊÂ¼þ
-	HANDLE				m_hComm;		   // ´®¿Ú¾ä±ú
+	HANDLE				m_hShutdownEvent;  //stopå‘ç”Ÿçš„äº‹ä»¶
+	HANDLE				m_hComm;		   // ä¸²å£å¥æŸ„
 	HANDLE				m_hWriteEvent;	 // write
 
 	// Event array.
 	// One element is used for each event. There are two event handles for each port.
 	// A Write event and a receive character event which is located in the overlapped structure (m_ov.hEvent).
 	// There is a general shutdown when the port is closed.
-	///ÊÂ¼þÊý×é£¬°üÀ¨Ò»¸öÐ´ÊÂ¼þ£¬½ÓÊÕÊÂ¼þ£¬¹Ø±ÕÊÂ¼þ
-	///Ò»¸öÔªËØÓÃÓÚÒ»¸öÊÂ¼þ¡£ÓÐÁ½¸öÊÂ¼þÏß³Ì´¦Àí¶Ë¿Ú¡£
-	///Ð´ÊÂ¼þºÍ½ÓÊÕ×Ö·ûÊÂ¼þÎ»ÓÚoverlapped½á¹¹Ìå£¨m_ov.hEvent£©ÖÐ
-	///µ±¶Ë¿Ú¹Ø±ÕÊ±£¬ÓÐÒ»¸öÍ¨ÓÃµÄ¹Ø±Õ¡£
+	///äº‹ä»¶æ•°ç»„ï¼ŒåŒ…æ‹¬ä¸€ä¸ªå†™äº‹ä»¶ï¼ŒæŽ¥æ”¶äº‹ä»¶ï¼Œå…³é—­äº‹ä»¶
+	///ä¸€ä¸ªå…ƒç´ ç”¨äºŽä¸€ä¸ªäº‹ä»¶ã€‚æœ‰ä¸¤ä¸ªäº‹ä»¶çº¿ç¨‹å¤„ç†ç«¯å£ã€‚
+	///å†™äº‹ä»¶å’ŒæŽ¥æ”¶å­—ç¬¦äº‹ä»¶ä½äºŽoverlappedç»“æž„ä½“ï¼ˆm_ov.hEventï¼‰ä¸­
+	///å½“ç«¯å£å…³é—­æ—¶ï¼Œæœ‰ä¸€ä¸ªé€šç”¨çš„å…³é—­ã€‚
 	HANDLE				m_hEventArray[3];
 
 	// structures
-	OVERLAPPED			m_ov;///Òì²½I/O
-	COMMTIMEOUTS		m_CommTimeouts;///³¬Ê±ÉèÖÃ
-	DCB					m_dcb;///Éè±¸¿ØÖÆ¿é
-
-	// owner window
-	//CWnd*				m_pOwner;
-	HWND				m_pOwner;
-
+	OVERLAPPED			m_ov;///å¼‚æ­¥I/O
+	COMMTIMEOUTS		m_CommTimeouts;///è¶…æ—¶è®¾ç½®
+	DCB					m_dcb;///è®¾å¤‡æŽ§åˆ¶å—
 
 	// misc
-	UINT				m_nPortNr;		///´®¿ÚºÅ
-	char*				m_szWriteBuffer;///Ð´»º³åÇø
+	UINT				m_nPortNr;		///ä¸²å£å·
 	DWORD				m_dwCommEvents;
-	DWORD				m_nWriteBufferSize;///Ð´»º³å´óÐ¡
+	char*				m_szWriteBuffer;///å†™ç¼“å†²åŒº
+	DWORD				m_nWriteBufferSize;///å†™ç¼“å†²å¤§å°
+	int					m_nWriteSize;//å†™å…¥å­—èŠ‚æ•°
+	BOOL				m_bHasWritten;///å†™å…¥æ ‡å¿—
 
-	int					m_nWriteSize;//Ð´Èë×Ö½ÚÊý //add by mrlong 2007-12-25
+private:
+	ISerialPortSink* m_pSink;
 };
 
-#endif __SERIALPORT_H__
+#endif
