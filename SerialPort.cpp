@@ -40,7 +40,6 @@ CSerialPort::~CSerialPort()
 	{
 		CloseHandle(m_hComm);
 		m_hComm = NULL;
-		return;
 	}
 
 	do
@@ -743,7 +742,6 @@ void CSerialPort::ClosePort()
 	{
 		CloseHandle(m_hComm);
 		m_hComm = NULL;
-		return;
 	}
 
 	do
