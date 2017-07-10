@@ -78,7 +78,7 @@ CSerialPort::~CSerialPort()
 //parity: n=none,e=even,o=odd,m=mark,s=space
 //databits: 5,6,7,8
 //stopbits: 1,1.5,2
-BOOL CSerialPort::OpenPort(ISerialPortSink* pSink,
+DWORD CSerialPort::OpenPort(ISerialPortSink* pSink,
 						   UINT  portnr,		// portnumber
 						   DWORD  baud,			// baudrate
 						   char  parity,		// parity
@@ -90,11 +90,12 @@ BOOL CSerialPort::OpenPort(ISerialPortSink* pSink,
 						   DWORD   ReadTotalTimeoutMultiplier,
 						   DWORD   ReadTotalTimeoutConstant,
 						   DWORD   WriteTotalTimeoutMultiplier,
-						   DWORD   WriteTotalTimeoutConstant )
+						   DWORD   WriteTotalTimeoutConstant)
 
 {
+	DWORD dwError = -1L;
 	if(pSink == NULL || portnr < 0 || portnr > COMM_MAX_PORT_NUMBER)
-		return FALSE;
+		return dwError;
 
 	// if the thread is alive: Kill
 	if (m_bThreadAlive)
@@ -207,26 +208,21 @@ BOOL CSerialPort::OpenPort(ISerialPortSink* pSink,
 
 	if (m_hComm == INVALID_HANDLE_VALUE)
 	{
-		switch(GetLastError())
-		{
-		case ERROR_FILE_NOT_FOUND:
-			{
-				//串口不存在
-				break;
-			}
-		case ERROR_ACCESS_DENIED:
-			{
-				//串口拒绝访问
-				break;
-			}
-		default:
-			break;
-		}
+		dwError = GetLastError();
+		//switch(dwError)
+		//{
+		//case ERROR_FILE_NOT_FOUND:
+		//	Log("串口不存在");
+		//	break;
+		//case ERROR_ACCESS_DENIED:
+		//	Log("串口拒绝访问");
+		//	break;
+		//}
 		// port not found
 		delete [] szPort;
 		//delete [] szBaud;
 
-		return FALSE;
+		return dwError;
 	}
 
 	// set the timeout values
@@ -281,10 +277,10 @@ BOOL CSerialPort::OpenPort(ISerialPortSink* pSink,
 	if (m_Thread == NULL)
 	{
 		ClosePort();
-		return FALSE;
+		return -2;
 	}
 
-	return TRUE;
+	return ERROR_SUCCESS;
 }
 
 //  The CommThread Function.

@@ -34,7 +34,7 @@ public:
 	virtual ~CSerialPort();
 
 	// port initialisation
-	BOOL	OpenPort(ISerialPortSink* pSink=NULL,
+	DWORD	OpenPort(ISerialPortSink* pSink=NULL,
 					 UINT portnr = 1,
 					 DWORD baud = 9600,
 					 char parity = NOPARITY,
